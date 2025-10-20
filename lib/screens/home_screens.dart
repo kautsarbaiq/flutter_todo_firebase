@@ -1,39 +1,41 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class HomeScreens extends StatefulWidget {
-  const HomeScreens({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<HomeScreens> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreens> {
+class _HomeScreenState extends State<HomeScreen> {
   final user = FirebaseAuth.instance.currentUser;
   TextEditingController todoController = TextEditingController();
   String message = "";
 
   Future<void> addTodo() async {
-    String todoText = todoController.text.trim();
     try {
-      await FirebaseFirestore.instance.collection("todo").add({
-        'title': todoController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'check': false,
+      await FirebaseFirestore.instance.collection('todo').add({
+        "title": todoController.text,
+        "time": FieldValue.serverTimestamp(),
+        "check": false,
       });
       setState(() {
-        message = "Berhasil menambahkan todo";
-        todoController.clear();
+        message = "Berhasil menambahkan ${todoController.text}";
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
-      );
-      todoController.clear();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       setState(() {
-        message = "Gagal menambahkan todo: $e";
+        message = "Error $e";
       });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -41,18 +43,34 @@ class _HomeScreenState extends State<HomeScreens> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("TODO App"),
+        title: Text("Home Screen"),
         actions: [
           IconButton(
             onPressed: () {
-             showDialog(context: context, builder: (context) {
-              return AlertDialog(
-                title: Text("Konfirmasi Logout"),
-                content: Text("Apakah Anda yakin ingin logout?"),
-                
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('logout'),
+                    content: Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('Logout'),
+                      ),
+                    ],
+                  );
+                },
               );
-               
-             },);
             },
             icon: Icon(Icons.exit_to_app),
           ),
@@ -62,42 +80,126 @@ class _HomeScreenState extends State<HomeScreens> {
         child: Column(
           children: [
             Text(
-              "Selamat datang, ${user?.displayName ?? 'User'}",
+              'selamat datang ${user?.displayName} ',
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
                 color: Colors.green,
+                fontWeight: FontWeight.bold,
               ),
             ),
             Expanded(
               child: StreamBuilder(
                 stream: FirebaseFirestore.instance
-                    .collection("todo")
-                    .orderBy('timestamp', descending: true)
+                    .collection('todo')
                     .snapshots(),
+
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    {
-                      return Center(child: CircularProgressIndicator());
-                    }
+                    return Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Center(child: Text("Tidak ada todo"));
+                    return Center(child: Text(snapshot.error.toString()));
                   }
+
                   final data = snapshot.data!.docs;
                   return ListView.builder(
                     itemCount: data.length,
                     itemBuilder: (context, index) {
                       final todo = data[index];
-                      return ListTile(
-                        title: Text(todo['title']),
-                        trailing: IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection("todo")
-                                .doc(todo.id)
-                                .delete();
-                          },
+                      return Card(
+                        child: ListTile(
+                          leading: Checkbox(
+                            value: todo['check'],
+                            onChanged: (value) async {
+                              await FirebaseFirestore.instance
+                                  .collection('todo')
+                                  .doc(todo.id)
+                                  .update({'check': value});
+                            },
+                          ),
+                          title: Text(todo['title']),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  TextEditingController editController =
+                                      TextEditingController(
+                                        text: todo['title'],
+                                      );
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text('Edit Todo'),
+                                        content: TextField(
+                                          controller: editController,
+                                          decoration: InputDecoration(
+                                            labelText: 'Todo Title',
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () async {
+                                              await FirebaseFirestore.instance
+                                                  .collection('todo')
+                                                  .doc(todo.id)
+                                                  .update({
+                                                    'title':
+                                                        editController.text,
+                                                  });
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('Save'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                icon: Icon(Icons.edit, color: Colors.blue),
+                              ),
+                              IconButton(
+                                onPressed: () async {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: Text('Delete Todo'),
+                                        content: Text(
+                                          'Are you sure you want to delete this todo?',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () async {
+                                              await FirebaseFirestore.instance
+                                                  .collection('todo')
+                                                  .doc(todo.id)
+                                                  .delete();
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('Delete'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                icon: Icon(Icons.delete, color: Colors.red),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -109,7 +211,7 @@ class _HomeScreenState extends State<HomeScreens> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsetsGeometry.all(10),
+        padding: EdgeInsets.all(10),
         child: TextField(
           controller: todoController,
           decoration: InputDecoration(
@@ -120,7 +222,6 @@ class _HomeScreenState extends State<HomeScreens> {
               icon: Icon(Icons.send),
             ),
             border: OutlineInputBorder(),
-            labelText: "Masukkan Todo",
           ),
         ),
       ),
