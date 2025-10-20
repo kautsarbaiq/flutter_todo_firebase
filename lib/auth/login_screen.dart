@@ -23,17 +23,18 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text.trim(),
       );
       setState(() {
-        message = "berhasil login";
+        message = "Berhasil login";
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       setState(() {
-        message = "error $e";
+        message = "Error: $e";
       });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -51,12 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
-                    suffixIcon: IconButton(onPressed: () {
-                      setState(() {
-                        pass = !pass;
-                      });
-
-                    }, icon: pass ? Icon(Icons.visibility) : Icon(Icons.visibility_off),),
                     labelText: "Email",
                     hintText: "Enter your email",
                     border: OutlineInputBorder(
@@ -66,7 +61,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 TextField(
                   controller: passwordController,
+                  obscureText: pass, // Menyembunyikan password saat login
                   decoration: InputDecoration(
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          pass = !pass; // Toggle visibilitas password
+                        });
+                      },
+                      icon: pass
+                          ? Icon(Icons.visibility)
+                          : Icon(Icons.visibility_off),
+                    ),
                     labelText: "Password",
                     hintText: "Enter your password",
                     border: OutlineInputBorder(
@@ -83,13 +89,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       login();
                     },
-                    child: Text("Submit", style: TextStyle(color: Colors.white)),
+                    child: Text(
+                      "Submit",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('belum puya akun?'),
+                    Text('Belum punya akun?'),
                     TextButton(
                       onPressed: () {
                         Navigator.push(

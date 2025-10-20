@@ -20,12 +20,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> register() async {
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential username = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
+
+      await username.user!.updateDisplayName(usernameController.text.trim());
+      await username.user!.reload();
+
       setState(() {
-        message = 'Berhasil Register';
+        message = "Berhasil Register ${usernameController.text}";
       });
       ScaffoldMessenger.of(
         context,
@@ -51,6 +56,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(message),
                 Text('Halaman Register '),
+                TextField(
+                  controller: usernameController,
+                  decoration: InputDecoration(
+                    labelText: "Username",
+                    hintText: "Masukan username anda",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10),
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
@@ -83,6 +99,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
+                SizedBox(height: 10),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
